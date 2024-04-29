@@ -14,10 +14,16 @@
 #include "memlib.h"
 #include "config.h"
 
-/* private variables */
-static char *mem_start_brk;  /* points to first byte of heap */
-static char *mem_brk;        /* points to last byte of heap */
-static char *mem_max_addr;   /* largest legal heap address */ 
+/* private variables */  
+
+// heap의 첫 byte를 가리키는 포인터
+static char *mem_start_brk;
+
+// 힙의 마지막 byte에서 plus 1의 byte를 가리키는 포인터
+static char *mem_brk;
+
+// 힙의 최대 크기에 plus 1의 byte를 가리키는 포인터
+static char *mem_max_addr;
 
 /* 
  * mem_init - initialize the memory system model
@@ -30,8 +36,12 @@ void mem_init(void)
 	exit(1);
     }
 
-    mem_max_addr = mem_start_brk + MAX_HEAP;  /* max legal heap address */
-    mem_brk = mem_start_brk;                  /* heap is empty initially */
+    // 할당받은 heap의 첫 byte의포인터에 heap의 최대 크기를 더한다.
+    mem_max_addr = mem_start_brk + MAX_HEAP; 
+
+    // mem_brk는 사용중인 heap의 마지막 byte에 +1을 한 byte를 가리킨다.
+    // init 상태에서는 heap이 비어있으므로 start_brk와 동일하다
+    mem_brk = mem_start_brk;
 }
 
 /* 
@@ -54,6 +64,9 @@ void mem_reset_brk()
  * mem_sbrk - simple model of the sbrk function. Extends the heap 
  *    by incr bytes and returns the start address of the new area. In
  *    this model, the heap cannot be shrunk.
+
+인자로 받은 incr만큼 heap을 확장한다.
+이때 반환하는 값은 확장한 heap의 첫 주소를 가리키는 포인터이다
  */
 void *mem_sbrk(int incr) 
 {
@@ -78,6 +91,9 @@ void *mem_heap_lo()
 
 /* 
  * mem_heap_hi - return address of last heap byte
+
+ mem_brk는 사용중인 heap의 마지막 byte에 +1을 한 값이다.
+ 해당 함수는 heap의 마지막 byte를 가리키는 포인터를 원하므로 mem_brk에 -1을 해준다.
  */
 void *mem_heap_hi()
 {
