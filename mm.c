@@ -70,12 +70,12 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
-#define FIRST_FIT
-#define BEST_FIT
+// #define FIRST_FIT
+// #define BEST_FIT
 #define NEXT_FIT
 
-static char* heap_list;
-static char* next_fit_search_start_bp;
+static void* heap_list;
+static void* next_fit_search_start_bp;
 
 
 /**                                                                                                                                                                                          escing)한다.
@@ -223,6 +223,13 @@ void *find_fit(size_t asize)
             }
         }
 
+        // free block을 찾지 못 했을 경우
+        for (bp = heap_list; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
+        {   
+            if (GET_SIZE(HDRP(bp)) >= asize && GET_ALLOC(HDRP(bp))==FREE) {
+                return bp;
+            }
+        }
         return NULL;
     
     #endif
@@ -314,38 +321,54 @@ void mm_free(void *bp)
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
 
- ptr : 기존 block을 가리키는 포인터, size : 새롭게 할당하고자 하는 block의 사이즈
+ptr이 가리키는 메모리의 주소 크기를 size 바이트로 확장한다.
+이때, 연속된 메모리를 할당할 수 없을 경우 새로운 영역을 할당한 후 기존 요소들을 복사하여 새 메모리 주소를 반환
  */
 void *mm_realloc(void *ptr, size_t size)
 {
     void *newptr;
-    size_t copySize;
+    size_t copySize = GET_SIZE(HDRP(ptr));
+    size = ALIGN(size);
 
-    if (ptr == NULL) {
+    if (ptr== NULL) {
         return mm_malloc(size);
     }
 
     if (size <=0) {
-        perror("mm_realloc : size under zero");
         mm_free(ptr);
         return NULL;
+    }
+
+    if (size + DSIZE <= copySize) {
+        return ptr;
+    }
+
+    // 다음 block이 free일 떄
+    if (GET_ALLOC(HDRP(NEXT_BLKP(ptr)))==FREE) {
+        if (copySize + GET_SIZE(HDRP(NEXT_BLKP(ptr))) - DSIZE >=size) {
+            PUT(HDRP(ptr), PACK(copySize + GET_SIZE(HDRP(NEXT_BLKP(ptr))), ALLOCATED));
+            PUT(FTRP(ptr), PACK(copySize + GET_SIZE(HDRP(NEXT_BLKP(ptr))), ALLOCATED));
+
+            place(ptr, size);
+
+            return ptr;
+        }
     }
     
     newptr = mm_malloc(size);
     if (newptr == NULL){
-        perror("mm_realloc : newPtr is null");
-        mm_free(ptr);
-        return 0;
+        return NULL;
+    }
+    
+    if (size < copySize) {
+        copySize = size;
     }
 
-    copySize = GET_SIZE(HDRP(ptr)) - DSIZE;
-    if (size < copySize)
-      copySize = size;
+    //bp메모리에 있는 값을 num copysize만큼 복사해서 newptr에 넣는다.
     memcpy(newptr, ptr, copySize);
     mm_free(ptr);
     return newptr;
 }
-
 
 
 
